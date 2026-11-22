@@ -67,3 +67,34 @@ try:
 except AssertionError as e:
     print("Cheating feature correctly caught:")
     print(" ", e)
+    # %% Step 8: Tune Ridge alpha using ONLY rows before the first test day
+    from sklearn.linear_model import Ridge
+
+    first_test_row = splits[0][1][0]  # 1000
+    X_tune, y_tune = X.iloc[:first_test_row], y.iloc[:first_test_row]
+    assert X_tune.index[-1] < X.index[first_test_row]
+    print("Tuning data:", X_tune.index[0].date(), "to", X_tune.index[-1].date(),
+          "| first real test day:", X.index[first_test_row].date())
+
+    # Smaller walk-forward inside the tuning block
+    tune_splits = list(validation.walk_forward_splits(
+        len(X_tune), initial_train=500, test_size=config.TEST_SIZE, gap=0))
+    print("Tuning folds:", len(tune_splits))
+
+    rows = []
+    for alpha in [0.1, 1, 10, 100, 1000, 10000]:
+        pred = validation.walk_forward_predict(
+            lambda a=alpha: Ridge(alpha=a), X_tune, y_tune, tune_splits)
+        mask = pred.notna()
+        rmse = float(np.sqrt(((y_tune[mask] - pred[mask]) ** 2).mean()))
+        rows.append({"alpha": alpha, "rmse": rmse})
+
+    naive_rmse = float(np.sqrt((y_tune[mask] ** 2).mean()))  # naive = predict a 0 return
+    results = pd.DataFrame(rows).set_index("alpha")
+    results["vs_naive_%"] = (results["rmse"] / naive_rmse - 1) * 100
+    print("\nTuning rows scored:", int(mask.sum()))
+    print("Naive RMSE:", round(naive_rmse, 6))
+    print(results.round(6))
+
+    best_alpha = results["rmse"].idxmin()
+    print("\nBest alpha on the tuning data:", best_alpha)
