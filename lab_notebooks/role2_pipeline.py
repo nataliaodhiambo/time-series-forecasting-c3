@@ -1,0 +1,51 @@
+# %% Role 2 pipeline: dataset and walk-forward folds
+import sys, random
+from pathlib import Path
+import numpy as np
+import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tslab import config, data, features, validation
+
+random.seed(config.SEED)
+np.random.seed(config.SEED)
+
+# %% Step 6: dataset
+frame = data.load_market_data()
+dataset = features.make_dataset(frame, horizon=1)
+
+print("Frame rows:", len(frame))
+print("Dataset rows:", len(dataset),
+      "| first:", dataset.index[0].date(), "| last:", dataset.index[-1].date())
+print("Number of features:", len(features.ALL_FEATURES))
+print("Rows with no target yet:", int(dataset["target_return"].isna().sum()))
+
+# Training/testing table: drop the last row (no 'tomorrow' yet)
+model_data = dataset.dropna(subset=["target_return"])
+X = model_data[features.ALL_FEATURES]
+y = model_data["target_return"]
+print("Model table:", X.shape, "| y rows:", len(y))
+print("Missing values in X:", int(X.isnull().sum().sum()))
+
+# %% Walk-forward folds (expanding window, 1-day horizon so gap = 0)
+splits = list(validation.walk_forward_splits(
+    n_samples=len(X),
+    initial_train=config.INITIAL_TRAIN,
+    test_size=config.TEST_SIZE,
+    gap=0,
+))
+print("\nNumber of folds:", len(splits))
+
+table = validation.describe_splits(splits, X.index)
+pd.set_option("display.width", 200)
+print(table.head(3))
+print(table.tail(3))
+
+# %% Checks: time order is respected
+for train_idx, test_idx in splits:
+    assert train_idx.max() < test_idx.min(), "Training rows overlap the test rows"
+all_test = np.concatenate([t for _, t in splits])
+assert len(all_test) == len(set(all_test)), "A row is tested more than once"
+assert (np.diff(all_test) == 1).all(), "Test rows are not consecutive"
+print("\nAll checks passed. Test rows:", len(all_test),
+      "| first test date:", X.index[all_test[0]].date())
