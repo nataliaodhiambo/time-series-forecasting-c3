@@ -49,3 +49,21 @@ assert len(all_test) == len(set(all_test)), "A row is tested more than once"
 assert (np.diff(all_test) == 1).all(), "Test rows are not consecutive"
 print("\nAll checks passed. Test rows:", len(all_test),
       "| first test date:", X.index[all_test[0]].date())
+# %% Step 7: Look-ahead test
+# (a) The team's feature set must pass
+result = features.check_no_lookahead(frame, n_checks=20, seed=config.SEED)
+print("build_features passes the look-ahead test:", result)
+
+# (b) Control: a feature that deliberately peeks at tomorrow must FAIL
+def cheating_features(df):
+    out = features.build_features(df)
+    out["cheat_tomorrow_ret"] = np.log(df["Close"].shift(-1) / df["Close"])
+    return out
+
+try:
+    features.check_no_lookahead(frame, feature_function=cheating_features,
+                                n_checks=20, seed=config.SEED)
+    print("PROBLEM: the cheating feature was NOT caught")
+except AssertionError as e:
+    print("Cheating feature correctly caught:")
+    print(" ", e)
