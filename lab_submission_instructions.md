@@ -18,11 +18,11 @@
 
 **Member 2**
 
-| **Details**                                                                                        | **Comment** |
-|:---------------------------------------------------------------------------------------------------|:------------|
-| **Student ID:**                                                                                    |             |
-| **Name:**                                                                                          |             |
-| **What part of the lab did you personally contribute to,** <br>**and what did you learn from it?** |             |
+| **Details**                                                                                        | **Comment**  |
+|:---------------------------------------------------------------------------------------------------|:-------------|
+| **Student ID:**                                                                                    | 168961       |
+| **Name:**                                                                                          | George Makau |
+| **What part of the lab did you personally contribute to,** <br>**and what did you learn from it?** | I built the data alignment, the target, the walk-forward folds, the look-ahead test and the tuning step, and packaged them in a shared setup file so the other roles use identical data and folds. I learned that a feature can look harmless and still leak the future, which is why the look-ahead test matters. I also learned that scalers and tuning must stay inside the training period, and that a model can look reasonable on a chart yet fail to beat the naive forecast.             |
 
 **Member 3**
 
